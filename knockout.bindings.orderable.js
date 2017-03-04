@@ -1,4 +1,5 @@
-// FROM: https://github.com/rapito/knockout-orderable/tree/multi-sort
+// forked FROM: https://github.com/rapito/knockout-orderable/tree/multi-sort
+// forked FROM: https://github.com/apuchkov/knockout-orderable
 ko.bindingHandlers.orderable = {
     getProperty: function (o, s) {
         // copied from http://stackoverflow.com/questions/6491463/accessing-nested-javascript-objects-with-string-key
@@ -18,7 +19,7 @@ ko.bindingHandlers.orderable = {
 
     // Extracts value from a field if its a function or not.
     getVal: function (object, string) {
-        // first getProperty/field out of object
+        // first getPropertya/field out of object
         var field = ko.bindingHandlers.orderable.getProperty(object, string);
         // then get the val if its a function or not.
         return (typeof field === 'function') ? field() : field;
@@ -26,19 +27,22 @@ ko.bindingHandlers.orderable = {
 
     compare: function (left, right) {
 
-        left = left == null ? '' : left;
-        right = right == null ? '' : right;
+        // custom for sustrana
+        if (left === null || left === '') return 1;
+        if (right === null || right === '') return -1;
+        ///////////
 
-        // Custom order for sustrana
-        // NOT part of plugin sort on github
-        if (left == '') return 1;
-        if (right == '') return -1;
+        if (typeof left === 'string' || typeof right === 'string') {
+            return left ? left.localeCompare(right) : 1;
+        }
         
+
         if (left > right)
             return 1;
 
         return left < right ? -1 : 0;
     },
+
 
     //get all sort results of thenBy fields
     sortThenBy: function (left, right, field, thenBy, orderDirection) {
@@ -47,7 +51,6 @@ ko.bindingHandlers.orderable = {
         if (!thenBy) return sortResults;
 
         var thenByFields = thenBy.split(','); // extract fields
-        //console.log('sortResults', thenByFields, left, right, field);
 
         for (var i = 0; i < thenByFields.length; i++) {
 
@@ -62,7 +65,6 @@ ko.bindingHandlers.orderable = {
                 sort = ko.bindingHandlers.orderable.compare(lv, rv);
             }
 
-            //console.log('sortResults', lv, rv, sort);
             sortResults.push(sort);
         }
 
@@ -115,7 +117,6 @@ ko.bindingHandlers.orderable = {
         var field = valueAccessor().field;
         var thenBy = valueAccessor().thenBy;
 
-        console.log("hey");
         if (viewModel[collection].orderPreSort == undefined) viewModel[collection].orderPreSort = valueAccessor().preSort;
         if (viewModel[collection].orderPostSort == undefined) viewModel[collection].orderPostSort = valueAccessor().postSort;
 
@@ -131,9 +132,13 @@ ko.bindingHandlers.orderable = {
             viewModel[collection].orderThenByFields = ko.observable();
         }
 
-        var defaultField = valueAccessor().defaultField;
-        var defaultDirection = valueAccessor().defaultDirection || "asc";
+        var remember = $.jStorage.get('knockout.orderable.remember') || {};
+        var rememberKey = collection + "_" + location.pathname.replace(/\//g, '_');
+
+        var defaultField = remember[rememberKey + "_orderField"] ? remember[rememberKey + "_orderField"] == valueAccessor().field : valueAccessor().defaultField;
+        var defaultDirection = remember[rememberKey + "_orderField"] ? remember[rememberKey + "_orderDirection"] : valueAccessor().defaultDirection || "asc";
         var defaultThenBy = valueAccessor().defaultThenBy || null;
+
         if (defaultField) {
             viewModel[collection].orderField(field);
             viewModel[collection].orderDirection(defaultDirection);
@@ -159,12 +164,23 @@ ko.bindingHandlers.orderable = {
         });
 
         //order records when observables changes, so ordering can be changed programmatically
-        viewModel[collection].orderField.subscribe(function () {
+        viewModel[collection].orderField.subscribe(function (value) {
             ko.bindingHandlers.orderable.sort(viewModel, collection, field, thenBy);
+            var x = $.jStorage.get('knockout.orderable.remember') || {};
+            x[collection + "_" + location.pathname.replace(/\//g, '_')  + "_orderField"] = value;
+            $.jStorage.set('knockout.orderable.remember', x);
+
         });
-        viewModel[collection].orderDirection.subscribe(function () {
+
+        viewModel[collection].orderDirection.subscribe(function (value) {
             ko.bindingHandlers.orderable.sort(viewModel, collection, field, thenBy);
+            var x = $.jStorage.get('knockout.orderable.remember') || {};
+            x[collection + "_" + location.pathname.replace(/\//g, '_') + "_orderDirection"] = value;
+            $.jStorage.set('knockout.orderable.remember', x);
         });
+
+     
+
     },
 
     update: function (element, valueAccessor, allBindingsAccessor, viewModel, bindingContext) {
