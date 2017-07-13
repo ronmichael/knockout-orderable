@@ -19,6 +19,7 @@ ko.bindingHandlers.orderable = {
 
     // Extracts value from a field if its a function or not.
     getVal: function (object, string) {
+        object = ko.unwrap(object); // RMZ: always make sure we have unwrapped the object
         // first getPropertya/field out of object
         var field = ko.bindingHandlers.orderable.getProperty(object, string);
         // then get the val if its a function or not.
