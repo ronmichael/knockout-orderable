@@ -9,7 +9,7 @@ ko.bindingHandlers.orderable = {
         while (a.length) {
             var n = a.shift();
             if (n in o) {
-                o = o[n];
+                o = ko.utils.unwrapObservable(o[n]);
             } else {
                 return;
             }
